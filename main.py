@@ -12,6 +12,7 @@ openai.api_key = "sk-proj-V0-fN-s9PK9I96BJOU-s7zdoux7W2CygjvkPEYjX7iaR7duxNjBEM4
 # Inisialisasi suara
 engine = pyttsx3.init()
 engine.setProperty('rate', 160)
+player = None
 
 def ngomong(text):
     print(f"🐱 Embut: {text}")
@@ -34,12 +35,12 @@ def hear_the_sound():
 def buka_aplikasi(name):
     if name == "chrome":
         os.system("start chrome")
-        print("chrome terbuka")
-    elif name == "Notepad":
-        os.system("start Notepad")
-        print("Notepad terbuka")
+        ngomong("Chrome terbuka")
+    elif name == "notepad":
+        os.system("start notepad")
+        ngomong("Notepad terbuka")
     else:
-        print("unknown aplication")
+        ngomong("Aplikasi tidak dikenali")
 
 def bantu_ngoding(perintah):
     try:
@@ -51,7 +52,7 @@ def bantu_ngoding(perintah):
             ]
         )
         jawaban = response["choices"][0]["message"]["content"]
-        ngomong("ini jawabannya...")
+        ngomong("Ini jawabannya...")
         print(jawaban)
         ngomong(jawaban[:100])
     except Exception as e:
@@ -60,15 +61,13 @@ def bantu_ngoding(perintah):
 def play_lagu(judul):
     global player 
     try:
-        # Set path VLC
         vlc_path = r"C:\Program Files\VideoLAN\VLC\vlc.exe"
         os.environ["PATH"] += os.pathsep + os.path.dirname(vlc_path)
 
-        # Konfigurasi yt-dlp buat search dan ambil audio
         ydl_opts = {
             'format': 'bestaudio/best',
             'quiet': True,
-            'default_search': 'ytsearch1',  # cari dan ambil 1 hasil
+            'default_search': 'ytsearch1',
             'nocheckcertificate': True,
         }
 
@@ -76,7 +75,6 @@ def play_lagu(judul):
             info = ydl.extract_info(judul, download=False)
             stream_url = info['entries'][0]['url']
 
-        # Putar audio via VLC
         ngomong(f"Muterin lagu {judul} langsung dari YouTube...")
         instance = vlc.Instance()
         player = instance.media_player_new()
@@ -89,20 +87,25 @@ def play_lagu(judul):
 
 def pause_lagu():
     global player
-    if player is not None:
+    if player:
         player.pause()
         ngomong("Lagu dijeda")
     else:
-        ngomong("Tidak ada lagu yang sedang dijeda")
+        ngomong("Belum ada lagu yang diputar")
 
 def stop_lagu():
     global player
-    if player is not None:
+    if player:
         player.stop()
         ngomong("Lagu dihentikan")
         player = None
     else:
-        ngomong("Tidak ada lagu yang sedang dihentikan")
+        ngomong("Tidak ada lagu yang sedang diputar")
+
+def log_aktivitas(command):
+    waktu_sekarang = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open("log.txt", "a") as file:
+        file.write(f"[{waktu_sekarang}] {command}\n")
 
 def tampilkan_menu():
     print("""
@@ -115,7 +118,7 @@ def tampilkan_menu():
 
 🌐 APLIKASI:
   buka chrome           ➜ Buka Google Chrome
-  buka Notepad          ➜ Buka Notepad/Notepad++
+  buka notepad          ➜ Buka Notepad
 
 🤖 AI CODING:
   tanya [perintah]      ➜ Nanya soal coding ke GPT
@@ -126,12 +129,13 @@ def tampilkan_menu():
 
 🔧 LAINNYA:
   menu                  ➜ Lihat menu ini lagi
-  clear                 ➜ Hapus semua perintah yang diinput
+  clear                 ➜ Bersihkan layar
   exit                  ➜ Keluar dari Embut 
 =======================================================
 """)
 
 def proses_perintah(perintah):
+    log_aktivitas(perintah)  # Logging langsung di sini
     if perintah.startswith("buka "):
         app = perintah.replace("buka ", "")
         buka_aplikasi(app)
@@ -162,14 +166,16 @@ def main():
         mode = input("Ketik [suara] atau [ketik]: ").lower()
         if mode == "suara":
             command = hear_the_sound()
-        else:
+        elif mode == "ketik":
             waktu = datetime.datetime.now().strftime("%H:%M")
             prompt = f"\033[92m[{waktu}] > \033[0m"
             command = input(prompt).lower()
+        else:
+            ngomong("Pilihannya cuma [suara] atau [ketik]")
+            continue
 
         if command:
             proses_perintah(command)
-
 
 if __name__ == "__main__":
     main()
