@@ -1,0 +1,111 @@
+Kalau Lu pilih ketik lu bisa menggunakan perintah di terminal atau cmd
+gua kasih list perintah di terminal atau cmd
+
+# perintah                 |  # Deskripsi
+1 Buka chrome.             |  # Buka aplikasi chrome.
+2 Buka Telegram.           |  # Buka aplikasi Telegram.
+3 Tanya sesuatu code/soal. |  # Bantu ngoding dengan code/soal.
+4 Play [judul lagu].       |  # Muter lagu dari YouTube Langsung.
+5 Stop lagu.               |  # Hentikan lagu yang sedang dihentikan.
+6 Pause lagu.              |  # Jeda lagu yang sedang dijeda.
+7 ATTACK DDOS.             |  # Mulai serangan DDOS TCP flood.
+8 cekip .                  |  # Cek IP dan port dari domain.
+9 cekping .                |  # Cek koneksi ke internet.
+
+# Contoh cara Kerjanya
+Misalkan lu pilih Perintha ketik di terminal atau cmd
+> Play duka #{judul lagu}
+Atau lu mau tanya sesuatu code/soal
+
+Misalkan lu pilih Perintah suara
+> Tanya apakah saya bisa menggunakan Embut?
+Atau lu ngomong dengan suara
+"Buka chrome"
+"Play Duka"
+# Pastiin mic mu aktif dan Ngk error saat mengunakan program ini !!
+
+# Disini juga memakai log.txt untuk mencatat perintah yang diberikan
+kalok mau lihat history perintah kalian bisa lihat log.txt
+!!! Pastiin log.txt di folder Embut
+
+# Cara mengunakan ATTACK DDOS:
+ Ketik perintah serang [ip] [port] [threads]
+ Contoh: serang 192.168.1.1 80 1000
+ scrip akan Langsung berjalan serang TCP flood ke target 
+ # Jika ingin melihat Ping Ip/Host nya kalian salin Ip Yang ingin kalian serang 
+ Kalina pergi ke browser kalian atau chrome kalian kalian ketik atau salin Link di bawah ini 
+
+ https://check-host.net/?lang=en
+ # cara pemakain nya sangat 
+
+ # Jika ingin melihat Port yang ada di Host kalian bisa menggunakan perintah cekip
+ cekip [domain]
+ # contoh
+ cekip google.com
+ # kalo ingin melihat IP kalian bisa menggunakan perintah cekping
+ cekping [ip/domain]
+ # contoh   
+ cekping google.com
+ # kalo ingin melihat koneksi ke internet kalian bisa menggunakan perintah cekkoneksi
+ cekkoneksi
+
+ # Cara Memakai Perintah HACKING TOOLS
+
+ # Funsi Slowloris
+ Slowloris adalah sebuah serangan DoS yang menggunakan HTTP untuk mengganggu kinerja server
+ # Cara menggunakannya
+  Cara pakai di Embut atau nama program kalian
+
+1.( Pastikan Sudah install slowloris
+Kalok belum Download/Install 
+kalian bisa buka Terminal windows kalian Atau Klick Win + r Terus Ketik
+cmd
+kalok sudah terbuka kalian ketik
+pip install slowloris
+kalok sudah terinstall kalian bisa menggunakan perintah slowloris
+
+kalok sudah terbuka kalian ketik
+# Slowloris masukin target yang kalian ingin serang
+ # Contoh Slowloris example.com
+   # Embut / Program kalian akan menjalankan serangan Slowloris ke target kalian
+)
+2.( GoldenEye
+  #Fungsi GoldenEye
+    Melakukan serangan Http DoS ke Website dengan membanjiri server mengunakan banyak requirements
+    Http
+
+# Cara pakai di Embut / Program kalian 
+ 1. Pastikan Sudah clone repo GoldenEye dan file goldeneye.py
+ ada di folder C:\Users\HP\Desktop\Web\GoldenEye-master\
+  Kalok kalian belum download File goldeneye nya kalian bisa download di Github Untuk link nya ada di bawah ini |
+  https://github.com/jseidl/GoldenEye.git GoldenEye-master
+
+  Kalok kalian udh download kalian tarok ke folder yang di mana ada File Main.py kalian 
+
+  Contoh gua 
+  NAMA file gua Web
+  > Web
+  >> GoldenEye-master
+  >>> CARA_PAKAI_EMBUT.txt
+  >>>> Embut.py 
+  >>>>> Log.txt 
+
+Kalok udh tarok kalian bisa menggunakan perintah di bawah ini
+
+GoldenEye [target]
+
+    Contoh:
+GoldenEye http://example.com
+
+# Embut akan menjalankan scrip goldeneye ke target dengan worker default misal nya 1000 worker
+
+# Peringatan!!
+Jangan gunakan GoldenEye untuk serangan DoS ke website yang tidak diizinkan
+❗Gunakan Embut & semua fiturnya hanya untuk tujuan edukasi, riset, dan pengujian sistem milik sendiri.
+
+❌ Dilarang keras menggunakan tools seperti GoldenEye, Slowloris, atau fitur DDoS untuk menyerang website/aplikasi tanpa izin. Itu termasuk tindakan ilegal dan bisa dikenai sanksi hukum.
+
+✔️ Gunakan di lingkungan lokal atau sistem milik pribadi untuk pengujian keamanan.
+
+🚫 Kami tidak bertanggung jawab atas segala bentuk penyalahgunaan, kerugian, kerusakan sistem, atau konsekuensi hukum yang terjadi akibat penggunaan program ini. Segala risiko ditanggung pengguna.
+
