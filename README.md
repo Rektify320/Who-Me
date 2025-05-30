@@ -1,4 +1,4 @@
-[]((https://imgbox.com/4mf4R26O))
+[URL=https://imgbox.com/4mf4R26O][IMG]https://thumbs2.imgbox.com/1d/a9/4mf4R26O_t.gif[/IMG][/URL]
 
 # Who-Me
 Ai Jarvis/Asisten
