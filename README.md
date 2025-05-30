@@ -1,3 +1,9 @@
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=x1xhlol/system-prompts-and-models-of-ai-tools&type=Date)](https://www.star-history.com/#x1xhlol/system-prompts-and-models-of-ai-tools&Date)
+
+
+
 # Who-Me
 Ai Jarvis/Asisten
 Embut is a smart and fun terminal-based assistant built with Python.
