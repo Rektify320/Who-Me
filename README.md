@@ -1,8 +1,4 @@
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=x1xhlol/system-prompts-and-models-of-ai-tools&type=Date)](https://www.star-history.com/#x1xhlol/system-prompts-and-models-of-ai-tools&Date)
-
-
+[]((https://imgbox.com/4mf4R26O))
 
 # Who-Me
 Ai Jarvis/Asisten
@@ -54,6 +50,8 @@ buka chrome
 tanya how to make a python class
 
 pause, stop, clear, exit
+
+[![Star History Chart](https://api.star-history.com/svg?repos=x1xhlol/system-prompts-and-models-of-ai-tools&type=Date)](https://www.star-history.com/#x1xhlol/system-prompts-and-models-of-ai-tools&Date)
 
 🔐 API Keys
 Create a .env file or store your OpenAI API key securely.
