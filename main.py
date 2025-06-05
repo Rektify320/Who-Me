@@ -14,6 +14,7 @@ import requests
 import sys
 import platform
 import subprocess
+import queue
 import speech_recognition as sr
 from colorama import init, Fore, Style
 import pyfiglet
@@ -50,7 +51,8 @@ def hear_the_sound():
 def buka_aplikasi(name):
     apps = {
         "chrome": "start chrome",
-        "notepad": "start notepad"
+        "notepad": "start notepad",
+        "youtube": "start https://www.youtube.com",
     }
     if name in apps:
         os.system(apps[name])
@@ -74,49 +76,158 @@ def bantu_ngoding(perintah):
     except Exception as e:
         print(f"{Fore.RED}⚠️ Gagal ambil jawaban dari Embut: {e}{Fore.RESET}")
 
+import os
+import time
+import yt_dlp
+import vlc
+import requests
+
+init(autoreset=True)
+
+# Setup pyttsx3 dan antrian TTS
+tts_queue = queue.Queue()
+engine = pyttsx3.init()
+
+# Cari voice bahasa Indonesia kalau ada
+voices = engine.getProperty('voices')
+for voice in voices:
+    if 'indonesia' in voice.name.lower() or 'id' in voice.id.lower():
+        engine.setProperty('voice', voice.id)
+        break
+engine.setProperty('rate', 150)
+
+def tts_worker():
+    while True:
+        text = tts_queue.get()
+        if text is None:  # tanda stop thread
+            break
+        engine.say(text)
+        engine.runAndWait()
+        tts_queue.task_done()
+
+# Start thread tts_worker satu kali saja
+threading.Thread(target=tts_worker, daemon=True).start()
+
+def ngomong(text):
+    print(f"🐱 Embut: {text}")
+    tts_queue.put(text)
+
+def cari_lirik(judul):
+    try:
+        query = judul.lower().split("feat")[0].strip()
+        url = f"https://some-random-api.com/lyrics?title={query}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("lyrics", "❌ Lirik nggak ketemu.")
+        else:
+            return "❌ Lirik nggak ketemu atau error API."
+    except Exception as e:
+        return f"⚠️ Gagal ambil lirik: {str(e)}"
+
+def parse_lrc(lrc_text):
+    pattern = re.compile(r'\[(\d+):(\d+\.\d+)\](.*)')
+    lrc_lines = []
+    for line in lrc_text.splitlines():
+        match = pattern.match(line)
+        if match:
+            minutes = int(match.group(1))
+            seconds = float(match.group(2))
+            text = match.group(3).strip()
+            timestamp = minutes * 60 + seconds
+            lrc_lines.append((timestamp, text))
+    lrc_lines.sort(key=lambda x: x[0])
+    return lrc_lines
+
+def sync_lirik_neon(player, lrc_lines):
+    i = 0
+    total_lines = len(lrc_lines)
+    colors = [Fore.CYAN, Fore.MAGENTA, Fore.YELLOW, Fore.GREEN, Fore.RED]
+
+    while i < total_lines and player.is_playing():
+        time_ms = player.get_time()
+        time_sec = time_ms / 1000 if time_ms != -1 else 0
+        if time_sec >= lrc_lines[i][0]:
+            color = colors[i % len(colors)]
+            print(color + lrc_lines[i][1] + Style.RESET_ALL)
+            ngomong(lrc_lines[i][1])
+            i += 1
+        time.sleep(0.5)
+
+player = None
+
 def play_lagu(judul):
     global player
-    if not judul:
-        ngomong("Judul lagunya nggak boleh kosong.")
+    if not judul.strip():
+        ngomong("🎵 Judul lagunya nggak boleh kosong.")
         return
+
     try:
         vlc_path = r"C:\Program Files\VideoLAN\VLC\vlc.exe"
-        os.environ["PATH"] += os.pathsep + os.path.dirname(vlc_path)
+        if os.path.exists(vlc_path):
+            os.environ["PATH"] += os.pathsep + os.path.dirname(vlc_path)
+
         ydl_opts = {
             'format': 'bestaudio/best',
             'quiet': True,
             'default_search': 'ytsearch1',
             'nocheckcertificate': True,
         }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(judul, download=False)
-            stream_url = info['entries'][0]['url'] if 'entries' in info else info['url']
-        ngomong(f"Muterin lagu: {judul} langsung dari YouTube...")
+            if 'entries' in info and info['entries']:
+                stream_url = info['entries'][0].get('url')
+                title = info['entries'][0].get('title', judul)
+            else:
+                stream_url = info.get('url')
+                title = info.get('title', judul)
+
+            if not stream_url:
+                ngomong("⚠️ Gagal ambil URL streaming. Video mungkin dilindungi DRM atau error.")
+                return
+
+        ngomong(f"🎶 Muterin lagu: {title}")
+
         instance = vlc.Instance()
         player = instance.media_player_new()
         media = instance.media_new(stream_url)
         player.set_media(media)
+        player.audio_set_volume(80)
         player.play()
         time.sleep(1)
+
+        lirik = cari_lirik(title)
+        print("\n📜 Lirik:\n" + "-"*40)
+        print(lirik)
+        print("-"*40)
+
+        if lirik.startswith('['):
+            lrc_lines = parse_lrc(lirik)
+            threading.Thread(target=sync_lirik_neon, args=(player, lrc_lines), daemon=True).start()
+
     except Exception as e:
         ngomong(f"⚠️ Gagal muter lagu: {str(e)}")
 
-def pause_lagu():
-    global player
-    if player:
-        player.pause()
-        ngomong("Lagu dijeda")
-    else:
-        ngomong("Belum ada lagu yang diputar")
-
 def stop_lagu():
     global player
-    if player:
+    if player is not None:
         player.stop()
-        ngomong("Lagu dihentikan")
-        player = None
+        ngomong("⏹️ Lagu sudah dihentikan.")
     else:
-        ngomong("Tidak ada lagu yang sedang diputar")
+        ngomong("⚠️ Tidak ada lagu yang sedang diputar.")
+
+# --- Contoh parsing perintah dari user ---
+def proses_perintah(perintah):
+    perintah = perintah.strip().lower()
+    if perintah.startswith("play lagu "):
+        judul = perintah[10:].strip()
+        play_lagu(judul)
+    elif perintah == "stop lagu":
+        stop_lagu()
+    else:
+        ngomong("⚠️ Perintah tidak dikenali. Gunakan 'play lagu [judul]' atau 'stop lagu'.")
+
 
 def log_aktivitas(command):
     waktu_sekarang = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -152,21 +263,35 @@ def start_ddos(ip, port, threads):
         print(Fore.CYAN + "\n🛑 Serangan dihentikan oleh user." + Fore.RESET)
 
 def cek_ping_ip(ip_address):
-    print(f"\n=== PING KE {ip_address} ===")
+    print(f"\n{Fore.CYAN}=== PING KE {ip_address} ==={Fore.RESET}")
     try:
-        ping_cmd = ["ping", "-n", "4", ip_address] if platform.system().lower() == "windows" else ["ping", "-c", "4", ip_address]
+        system_os = platform.system().lower()
+        if system_os == "windows":
+            ping_cmd = ["ping", "-n", "4", ip_address]
+        else:
+            ping_cmd = ["ping", "-c", "4", ip_address]
+
         result = subprocess.run(ping_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
         if result.returncode == 0:
             print(Fore.GREEN + "[✓] Ping berhasil!" + Fore.RESET)
             print(result.stdout)
-            match = re.search(r'Average = (\d+ms)', result.stdout)
-            if match:
-                print(f"\n[✓] Rata-rata latency: {match.group(1)}")
+
+            if system_os == "windows":
+                match = re.search(r'Average = (\d+ms)', result.stdout)
+                if match:
+                    print(f"{Fore.YELLOW}[✓] Rata-rata latency: {match.group(1)}{Fore.RESET}")
+            else:
+                match = re.search(r'rtt min/avg/max/mdev = ([\d.]+)/([\d.]+)/([\d.]+)', result.stdout)
+                if match:
+                    print(f"{Fore.YELLOW}[✓] Latency - Min: {match.group(1)} ms | Avg: {match.group(2)} ms | Max: {match.group(3)} ms{Fore.RESET}")
         else:
-            print(Fore.RED + "[!] Gagal ping." + Fore.RESET)
+            print(Fore.RED + "[!] Gagal ping!" + Fore.RESET)
             print(result.stderr)
+
     except Exception as e:
         print(f"{Fore.RED}[!] Error saat ping: {e}{Fore.RESET}")
+
 
 def tampilkan_menu():
     # Neon ASCII Title
@@ -195,7 +320,7 @@ def tampilkan_menu():
         (Fore.MAGENTA, "🤖 AI CODING"),
         (Fore.LIGHTGREEN_EX, "  💬 tanya [perintah]" + Fore.WHITE + "         ➜ Nanya soal coding ke GPT\n"),
         (Fore.MAGENTA, "🛠️ HACKING TOOLS"),
-        (Fore.LIGHTGREEN_EX, "  🐍 slowloris [target]" + Fore.WHITE + "        ➜ Jalankan serangan Slowloris"),
+        (Fore.LIGHTGREEN_EX, "  🐍 slowloris " + Fore.WHITE + "        ➜ Jalankan serangan Slowloris"),
         (Fore.LIGHTGREEN_EX, "  🦾 goldeneye" + Fore.WHITE + "                ➜ Jalankan GoldenEye (HTTP DoS)\n"),
         (Fore.MAGENTA, "🗣️ INPUT MODE"),
         (Fore.LIGHTGREEN_EX, "  🎙️ suara" + Fore.WHITE + "                   ➜ Gunakan perintah suara"),
@@ -220,8 +345,6 @@ def proses_perintah(perintah):
     elif perintah.startswith("play "):
         judul = perintah[5:]
         play_lagu(judul)
-    elif perintah == "pause":
-        pause_lagu()
     elif perintah == "stop":
         stop_lagu()
     elif perintah == "menu":
@@ -275,7 +398,7 @@ def proses_perintah(perintah):
     elif perintah.startswith("slowloris "):
         target = perintah.split(" ", 1)[1]
         try:
-            subprocess.run(["slowloris", target])
+            subprocess.run(["python", "-m", "slowloris", target])
         except Exception as e:
             ngomong(f"Gagal menjalankan slowloris: {e}")
     elif perintah.startswith("goldeneye "):
@@ -294,20 +417,42 @@ def proses_perintah(perintah):
 
 def main():
     ngomong("Halo, gue Embut. Mau ketik atau ngomong?")
-    tampilkan_menu()
+    tampilkan_menu()  # pastikan fungsi ini ada dan jalan, buat nunjukin menu
+
     while True:
-        mode = input(Fore.LIGHTCYAN_EX + "Ketik [suara] atau [ketik]: ").lower()
+        mode = input(Fore.LIGHTCYAN_EX + "Ketik [suara] atau [ketik]: ").lower().strip()
+
         if mode == "suara":
-            command = hear_the_sound()
+            ngomong("Mode suara aktif. Tekan Ctrl+C untuk berhenti.")
+            while True:
+                try:
+                    perintah = hear_the_sound()  # fungsi yang buat denger suara
+                    if perintah:
+                        proses_perintah(perintah)
+                except KeyboardInterrupt:
+                    ngomong("Mode suara dihentikan. Mau pakai ketik?")
+                    break
+
         elif mode == "ketik":
-            waktu = datetime.datetime.now().strftime("%H:%M")
-            prompt = f"{Fore.GREEN}[{waktu}] > {Fore.RESET}"
-            command = input(prompt).lower()
+            ngomong("Mode ketik aktif. Tekan Ctrl+C untuk berhenti.")
+            while True:
+                try:
+                    perintah = input(Fore.LIGHTGREEN_EX + "> ").lower().strip()
+                    if perintah:
+                        proses_perintah(perintah)
+                except KeyboardInterrupt:
+                    ngomong("Mode ketik dihentikan. Mau pakai suara?")
+                    break
+
+        elif mode == "exit":
+            ngomong("Sampai jumpa rek!")
+            break
+
         else:
-            ngomong("Pilihannya cuma [suara] atau [ketik]")
-            continue
-        if command:
-            proses_perintah(command)
+            ngomong("Pilih 'suara' atau 'ketik', ya!")
+            tampilkan_menu()
+
 
 if __name__ == "__main__":
     main()
+# Jalankan fungsi utama
